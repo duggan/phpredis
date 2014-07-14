@@ -1,3 +1,9 @@
+php5-redis (2.2.5) unstable; urgency=low
+
+  * Updating version from upstream
+
+ -- Ross Duggan <ross.duggan@gmail.com>  Mon, 14 Jul 2014 13:50:00 +0100
+
 php5-redis (2.2.2-1) unstable; urgency=low
 
   * Non-maintainer upload.
