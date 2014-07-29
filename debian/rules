@@ -1,100 +1,48 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper.
-# This file is public domain software, originally written by Joey Hess. 
-#
-# This version is for packages that are architecture dependent.
 
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
+PECL_PKG_NAME = redis
+PECL_PKG_VER  = 2.2.5
+BIN_PACKAGE_NAME = php5-redis
 
-DEB_SRCDIR=$(shell pwd)
-INSTALL_DIR=$(DEB_SRCDIR)/debian/$(shell dh_listpackages)
-EXTENSION_DIR=`php-config5 --extension-dir`
-CFLAGS = -O3
+PKGDIR = .
+EXTDIR = $(shell /usr/bin/php-config5 --extension-dir)
+PHPAPI = $(shell /usr/bin/php-config5 --phpapi)
+INIDIR = $(shell /usr/bin/dpkg --compare-versions $(PHPAPI) lt 20100525 && echo conf.d || echo mods-available)
 
+%:
+	dh $@ --sourcedirectory=${PKGDIR}
 
-build: build-stamp
-build-stamp:
-	dh_testdir
+override_dh_auto_configure:
+	cd ${PKGDIR} && phpize5
+	dh_auto_configure --sourcedirectory=${PKGDIR} -- \
+		--prefix=/usr \
+		--with-${PECL_PKG_NAME} \
+		--with-php-config=/usr/bin/php-config5
 
-	# Add here commands to compile the package.
-	
-	# Because phpize --clean removes all testfiles
-	# in tests/*.php the svn-buildpackage will fail
-	# when tests/TestRedis.php was removed.
-	# So we backup the file:
-	cd $(DEB_SRCDIR) && mv tests/TestRedis.php tests/TestRedis.php.bak && \
-		phpize --clean && mv tests/TestRedis.php.bak tests/TestRedis.php && \
-	        phpize && \
-		./configure --with-php-config=/usr/bin/php-config5
-	$(MAKE) -C $(DEB_SRCDIR)
+override_dh_auto_install:
+	echo "php:Depends=phpapi-`php-config5 --phpapi`" >> \
+		debian/php5-${PECL_PKG_NAME}.substvars
+	mkdir -p debian/php5-${PECL_PKG_NAME}/$(EXTDIR)
+	install -m 644 -o root -g root $(PKGDIR)/modules/$(PECL_PKG_NAME).so \
+		debian/php5-${PECL_PKG_NAME}$(EXTDIR)/$(PECL_PKG_NAME).so
+	if [ -f "debian/$(PECL_PKG_NAME).ini" ]; then \
+		mkdir -p debian/$(BIN_PACKAGE_NAME)/etc/php5/$(INIDIR); \
+		cp debian/$(PECL_PKG_NAME).ini debian/$(BIN_PACKAGE_NAME)/etc/php5/$(INIDIR); \
+	fi
 
-	touch build-stamp
-
-clean:
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp
-
-	# Add here commands to clean up after the build process.
-	# See comment in build-stamp why doing the 'mv'
-	cd $(DEB_SRCDIR) && mv tests/TestRedis.php tests/TestRedis.php.bak && \
-		phpize --clean && mv tests/TestRedis.php.bak tests/TestRedis.php
-	#$(MAKE) -C $(DEB_SRCDIR) clean
-	#$(MAKE) distclean
-
-	dh_clean
-
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
-
-	# Add here commands to install the package into debian/<packagename>
-	$(MAKE) prefix=$(INSTALL_DIR)/usr EXTENSION_DIR=$(INSTALL_DIR)$(EXTENSION_DIR) install
-
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installchangelogs
-	dh_installdocs
-	dh_installexamples
-#	dh_install
-#	dh_installmenu
-#	dh_installdebconf	
-#	dh_installlogrotate
-#	dh_installemacsen
-#	dh_installcatalogs
-#	dh_installpam
-#	dh_installmime
-#	dh_installinit
-#	dh_installcron
-#	dh_installinfo
-#	dh_installwm
-#	dh_installudev
-#	dh_lintian
-#	dh_bugfiles
-#	dh_undocumented
-	dh_installman
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-#	dh_perl
-#	dh_makeshlibs
-	dh_installdeb
-	dh_shlibdeps
-	cd $(DEB_SRCDIR) && \
-	       echo "php5:Depends=phpapi-`php-config5 --phpapi`, php5-common" >> debian/phpredis.substvars
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install
+override_dh_auto_clean:
+	dh_auto_clean --sourcedirectory=${PKGDIR}
+	rm -rf ${PKGDIR}/build
+	rm -f ${PKGDIR}/Makefile.global
+	rm -f ${PKGDIR}/acinclude.m4
+	rm -f ${PKGDIR}/aclocal.m4
+	rm -f ${PKGDIR}/config.guess
+	rm -f ${PKGDIR}/config.h*
+	rm -f ${PKGDIR}/config.nice
+	rm -f ${PKGDIR}/config.sub
+	rm -f ${PKGDIR}/configure*
+	rm -f ${PKGDIR}/ltmain.sh
+	rm -f ${PKGDIR}/run-tests.php
+	rm -f ${PKGDIR}/mkinstalldirs
+	rm -f ${PKGDIR}/missing
+	rm -f ${PKGDIR}/install-sh
